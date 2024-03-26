@@ -1,3 +1,4 @@
+
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -21,38 +22,19 @@ spec:
            - pipefail
            - -c
            - |
-             # Create a backup policy using Kasten API
-             kasten_api_url="10.48.70.250:32365/k10/#/"  # Adjust this URL based on your Kasten API endpoint
-             backup_policy_name="mysqlapp-backup-policy-$(date +%Y%m%d%H%M%S)"
-             cat <<EOF | curl -X POST -d @- -H "Content-Type: application/json" $kasten_api_url/config/policies
-             {
-               "apiVersion": "config.kio.kasten.io/v1alpha1",
-               "kind": "Policy",
-               "metadata": {
-                 "name": "$backup_policy_name"
-               },
-               "spec": {
-                 "action": "backup",
-                 "namespaceSelector": {
-                   "matchNames": [
-                     "mysql"
-                   ]
-                 },
-                 "schedule": {
-                   "cronSchedule": "0 * * * *"
-                 },
-                 "retention": {
-                   "hourly": 24,
-                   "daily": 7,
-                   "weekly": 4,
-                   "monthly": 6,
-                   "yearly": 2
-                 },
-                 "storageConfig": {
-                   "profile": "mysql-test"
-                 }
-               }
-             }
+             # create a backup action on the project 
+             backup_name="mysqlapp-backup-$(date| tr ' ' '-'|tr ':' '-'|tr '[:upper:]' '[:lower:]')"
+             cat <<EOF | kubectl create -f -
+             apiVersion: actions.kio.kasten.io/v1alpha1
+             kind: BackupAction
+             metadata:  
+               name: $backup_name
+               namespace: $NAMESPACE   
+             spec:
+               filters: {}              
+               subject:
+                 name: $NAMESPACE
+                 namespace: $NAMESPACE
              EOF
             
              # Wait until the backup action is complete 
